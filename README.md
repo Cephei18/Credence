@@ -48,6 +48,17 @@ Create agent → minimal rights → verified behavior → credential progression
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/WHITEPAPER.md](docs/WHITEPAPER.md), and [docs/SMART_CONTRACT_SPEC.md](docs/SMART_CONTRACT_SPEC.md).
 
+### Credential Engine (`Agent → Verified Outcomes → Credentials → Rights`)
+
+On top of the level/rights core sits an optional, additive **Credential Engine**
+([CredentialRegistry.sol](contracts/contracts/CredentialRegistry.sol)): typed, soulbound, revocable credentials with an
+explicit state machine, persistent verification history, and first-class
+violations. Levels still grant credentials (the MVP bridge), and a dedicated
+[RightsResolver](contracts/contracts/libraries/RightsResolver.sol) derives rights from credentials in parallel. It's
+wired only when present, so the base protocol is unchanged without it. Full
+write-up — architecture, event spec, state machine, security review, migration —
+in [docs/CREDENTIAL_ENGINE.md](docs/CREDENTIAL_ENGINE.md).
+
 ## Rights model
 
 | Level | Name | Spend / epoch | Delegation | Treasury | Governance | Verified outcomes needed | Min principal stake |
@@ -67,7 +78,7 @@ npm install
 
 # 2. compile + test the protocol
 npm run compile
-npm test          # 12 passing — full progression + attack cases
+npm test          # 21 passing — progression + attack cases + credential engine
 
 # 3. run a local chain (terminal A)
 npm --workspace contracts run node

@@ -32,16 +32,25 @@ async function main() {
   await verifier.waitForDeployment();
   console.log(`MockOutcomeVerifier : ${await verifier.getAddress()}`);
 
+  const Engine = await ethers.getContractFactory("CredentialRegistry");
+  const engine = await Engine.deploy(deployer.address);
+  await engine.waitForDeployment();
+  console.log(`CredentialRegistry  : ${await engine.getAddress()}`);
+
   await (await passport.setVerifier(await verifier.getAddress())).wait();
   await (await passport.setNameRegistry(await registry.getAddress())).wait();
   await (await registry.setController(await passport.getAddress())).wait();
-  console.log("Wired: verifier + name registry + controller set.");
+  // Credential Engine: AgentPassport is its controller; passport points at it.
+  await (await engine.setController(await passport.getAddress())).wait();
+  await (await passport.setCredentialEngine(await engine.getAddress())).wait();
+  console.log("Wired: verifier + name registry + credential engine + controllers set.");
 
   const out = {
     network: network.name,
     AgentPassport: await passport.getAddress(),
     PassportNameRegistry: await registry.getAddress(),
     MockOutcomeVerifier: await verifier.getAddress(),
+    CredentialRegistry: await engine.getAddress(),
     parentNode,
   };
   console.log("\nDeployment summary:\n" + JSON.stringify(out, null, 2));

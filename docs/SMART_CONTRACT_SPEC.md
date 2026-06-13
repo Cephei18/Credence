@@ -127,10 +127,21 @@ struct Rights {               // pure function of Level — never stored mutable
 
 ---
 
+## Credential Engine (additive layer)
+
+`CredentialRegistry`, `RightsResolver`, and `ICredentialEngine` add the
+`Agent → Verified Outcomes → Credentials → Rights` model on top of the core
+without changing enforcement. Typed soulbound credentials, an explicit state
+machine, verification history, and first-class violations. Full spec:
+[CREDENTIAL_ENGINE.md](CREDENTIAL_ENGINE.md).
+
 ## Test coverage
 
-`contracts/test/AgentPassport.test.ts` — 12 passing:
-principal stake gating · Level 0 envelope · chokepoint blocking · verifier-only fulfillment · full magical flow · level-up gating by verified count · stake-floor gating for Autonomous · credential decay · slashing + downgrade on failure · stake-withdraw floor · guardian pause · soulbound + unique names.
+`contracts/test/` — 21 passing.
+
+`AgentPassport.test.ts` (12): principal stake gating · Level 0 envelope · chokepoint blocking · verifier-only fulfillment · full magical flow · level-up gating by verified count · stake-floor gating for Autonomous · credential decay · slashing + downgrade on failure · stake-withdraw floor · guardian pause · soulbound + unique names.
+
+`CredentialEngine.test.ts` (9): level→credential bridge · credential→rights derivation · verification history · violation-driven suspension · guardian revoke cascade · explicit state-machine invalid-transition reverts · unauthorized-caller reverts · expiry semantics · passportMetadata aggregation.
 
 ## Audit / hardening backlog (post-hackathon)
 - Multi-verifier quorum + dispute window.

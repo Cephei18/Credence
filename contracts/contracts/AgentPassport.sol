@@ -5,6 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IOutcomeVerifier, IVerificationConsumer} from "./interfaces/IOutcomeVerifier.sol";
 import {IPassportNameRegistry} from "./interfaces/IPassportNameRegistry.sol";
+import {ICredentialEngine} from "./interfaces/ICredentialEngine.sol";
 
 /// @title AgentPassport
 /// @author Agent Passport
@@ -104,6 +105,15 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     IOutcomeVerifier public verifier;
     IPassportNameRegistry public nameRegistry;
 
+    /// @notice Optional Credential Engine layered on top. When unset (address 0)
+    ///         the protocol behaves exactly as before — every engine hook below
+    ///         is guarded, which is the backward-compatibility guarantee.
+    ICredentialEngine public credentialEngine;
+
+    /// @notice Default verification category recorded in history when a typed
+    ///         request isn't supplied (Prediction = index 2 in CredentialType).
+    uint8 public constant DEFAULT_VERIFICATION_TYPE = 2;
+
     // ---------------------------------------------------------------------
     // Storage
     // ---------------------------------------------------------------------
@@ -131,6 +141,9 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     event AgentPaused(uint256 indexed agentId, bool paused);
     event RightsRevoked(uint256 indexed agentId, Level from, Level to);
     event Slashed(address indexed principal, uint256 indexed agentId, uint256 amount);
+    event CredentialEngineSet(address indexed engine);
+    event RightsExpanded(uint256 indexed agentId, uint8 level, uint256 spendLimit);
+    event PassportUpdated(uint256 indexed agentId);
 
     // ---------------------------------------------------------------------
     // Errors
@@ -297,6 +310,23 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
             }
         }
         emit OutcomeRecorded(agentId, success, a.verifiedCount, a.violations);
+
+        // Credential Engine: persist the attestation and, on failure, raise a
+        // major violation that suspends the agent's active credentials. Guarded
+        // so the base protocol is unchanged when no engine is wired.
+        if (address(credentialEngine) != address(0)) {
+            credentialEngine.recordVerification(
+                agentId,
+                DEFAULT_VERIFICATION_TYPE,
+                success,
+                success ? int8(1) : int8(-1),
+                msg.sender
+            );
+            if (!success) {
+                credentialEngine.reportViolation(agentId, 2, "failed verification", msg.sender);
+            }
+            emit PassportUpdated(agentId);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -325,6 +355,14 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
         Level from = a.level;
         a.level = next;
         emit LeveledUp(agentId, from, next);
+
+        // Backward-compat bridge: a level grants its credentials in the engine.
+        // Progression logic is unchanged — the engine merely mirrors the result.
+        if (address(credentialEngine) != address(0)) {
+            credentialEngine.syncLevelCredentials(agentId, uint8(next));
+            emit RightsExpanded(agentId, uint8(next), _rightsForLevel(next).spendLimitPerEpoch);
+            emit PassportUpdated(agentId);
+        }
     }
 
     /// @notice Issue the portable passport name once the agent is eligible.
@@ -369,6 +407,12 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
             a.passportNode = bytes32(0);
         }
         emit RightsRevoked(agentId, from, to);
+
+        // Guardian downgrade also withdraws standing credentials in the engine.
+        if (address(credentialEngine) != address(0)) {
+            credentialEngine.revokeAll(agentId, "guardian revoke");
+            emit PassportUpdated(agentId);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -381,6 +425,11 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
 
     function setNameRegistry(address r) external onlyOwner {
         nameRegistry = IPassportNameRegistry(r);
+    }
+
+    function setCredentialEngine(address e) external onlyOwner {
+        credentialEngine = ICredentialEngine(e);
+        emit CredentialEngineSet(e);
     }
 
     function setVerificationTtl(uint256 ttl) external onlyOwner {
@@ -435,6 +484,40 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     ///         Level 0 agents are always "live" (nothing to decay).
     function isCredentialLive(uint256 agentId) external view returns (bool) {
         return _credentialLive(agents[agentId]);
+    }
+
+    /// @notice Aggregated passport record for the ENS metadata / explorer layer.
+    ///         Turns a passport into Identity + Sponsor + Verified History +
+    ///         Credentials + Rights + Violations rather than a wallet+level.
+    struct PassportMetadata {
+        address sponsor;              // authorizing principal (Privy identity)
+        uint256 stake;                // principal's slashable stake
+        Level level;                  // current credential tier
+        bool credentialLive;          // not decayed
+        uint64 verificationCount;     // successful verified outcomes
+        uint64 violationCount;        // recorded violations
+        bool hasPassport;             // ENS passport issued
+        bytes32 passportNode;         // ENS node (0 if none)
+        uint256 activeCredentialMask; // engine: bit i ⇔ CredentialType(i) active
+        Rights rights;                // live delegation envelope (after decay)
+    }
+
+    function passportMetadata(uint256 agentId) external view returns (PassportMetadata memory m) {
+        Agent storage a = agents[agentId];
+        if (a.principal == address(0)) revert UnknownAgent();
+        bool live = _credentialLive(a);
+        m.sponsor = a.principal;
+        m.stake = principals[a.principal].stake;
+        m.level = a.level;
+        m.credentialLive = live;
+        m.verificationCount = a.verifiedCount;
+        m.violationCount = a.violations;
+        m.hasPassport = a.passportNode != bytes32(0);
+        m.passportNode = a.passportNode;
+        m.activeCredentialMask = address(credentialEngine) != address(0)
+            ? credentialEngine.activeCredentialMask(agentId)
+            : 0;
+        m.rights = live ? _rightsOf(a) : _rightsForLevel(Level.Unverified);
     }
 
     // ---------------------------------------------------------------------

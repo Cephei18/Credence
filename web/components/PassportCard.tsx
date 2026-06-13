@@ -45,7 +45,7 @@ export function PassportCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className="card relative overflow-hidden"
-      style={{ borderColor: `${color}55` }}
+      style={{ borderColor: `${color}55`, background: "rgba(10, 20, 40, 0.84)" }}
     >
       <div
         className="absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl opacity-30"
@@ -111,9 +111,9 @@ export function PassportCard({
 
 function Stat({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className="rounded-xl border border-edge bg-black/20 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wide text-white/40">{label}</div>
-      <div className={danger ? "text-bad" : "text-white"}>{value}</div>
+    <div className="rounded-3xl border px-3 py-3" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
+      <div className="text-[11px] uppercase tracking-widest text-white/40">{label}</div>
+      <div className={danger ? "text-glow" : "text-white"}>{value}</div>
     </div>
   );
 }
@@ -121,16 +121,18 @@ function Stat({ label, value, danger }: { label: string; value: string; danger?:
 function Right({ icon, label, on }: { icon: React.ReactNode; label: string; on: boolean }) {
   return (
     <div
-      className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+      className="flex items-center gap-2 rounded-3xl border px-3 py-2 text-sm"
       style={{
-        borderColor: on ? "#34d39955" : "#ffffff14",
-        background: on ? "#34d39912" : "transparent",
-        color: on ? "#34d399" : "#ffffff55",
+        borderColor: on ? "rgba(107,241,203,0.24)" : "rgba(255,255,255,0.12)",
+        background: on ? "rgba(107,241,203,0.12)" : "rgba(255,255,255,0.04)",
+        color: on ? "#6bf1cb" : "#d8d9ff",
       }}
     >
       {icon}
       <span>{label}</span>
-      <span className="ml-auto text-xs">{on ? "granted" : "locked"}</span>
+      <span className="ml-auto text-xs uppercase tracking-wide" style={{ color: on ? "#6bf1cb" : "#abb4d7" }}>
+        {on ? "granted" : "locked"}
+      </span>
     </div>
   );
 }

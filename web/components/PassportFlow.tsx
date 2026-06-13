@@ -188,32 +188,25 @@ export default function PassportFlow() {
   // ---- UI ----------------------------------------------------------------
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/20 text-accent">
-            <ShieldCheck />
+      <header className="dashboard-header flex flex-col gap-6 rounded-[2rem] border px-6 py-6 shadow-[0_36px_90px_-50px_rgba(0,0,0,0.8)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2">
+          <div className="dashboard-title text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            Agent Passport
           </div>
-          <div>
-            <div className="text-lg font-semibold">Agent Passport</div>
-            <div className="text-xs text-white/40">
-              Earned authority for autonomous agents
-            </div>
+          <div className="max-w-2xl text-sm text-white/60 sm:text-base">
+            A professional web3 authorization dashboard that turns verified behavior into enforceable agent authority.
           </div>
         </div>
         {ready && authenticated ? (
-          <div className="flex items-center gap-3 text-sm">
-            <span className="pill border-edge text-white/60">
+          <div className="flex flex-col items-start gap-3 text-sm sm:items-end">
+            <span className="pill border-edge text-white/70 bg-white/5">
               {user?.email?.address ?? short(address)}
             </span>
-            <button className="btn-ghost" onClick={logout}>
+            <button className="btn btn-ghost btn-large" onClick={logout}>
               Sign out
             </button>
           </div>
-        ) : (
-          <button className="btn-primary flex items-center gap-2" onClick={login} disabled={!ready}>
-            <LogIn size={16} /> Founder login (Privy)
-          </button>
-        )}
+        ) : null}
       </header>
 
       {!configured && (
@@ -235,11 +228,11 @@ export default function PassportFlow() {
             n={1}
             title="Authenticate the founder"
             done={authenticated}
-            desc="Privy answers the only question that matters for delegation: who authorized this agent? An embedded wallet is provisioned for the human principal."
+            desc="Privy answers the only question that matters for delegation and provisions the wallet for the flow."
           >
             {!authenticated && (
-              <button className="btn-primary" onClick={login} disabled={!ready}>
-                Login
+              <button className="btn btn-primary" onClick={login} disabled={!ready}>
+                <LogIn size={18} /> Privy Login
               </button>
             )}
           </Step>
@@ -252,7 +245,7 @@ export default function PassportFlow() {
             disabled={!authenticated}
           >
             {authenticated && !isRegistered && (
-              <button className="btn-primary" onClick={registerPrincipal} disabled={isPending}>
+              <button className="btn btn-primary btn-large" onClick={registerPrincipal} disabled={isPending}>
                 Stake 0.2 ETH & register
               </button>
             )}
@@ -260,13 +253,13 @@ export default function PassportFlow() {
 
           <Step
             n={3}
-            title="Create an agent (Level 0)"
+            title="Create an agent"
             done={agentId !== undefined}
             desc="The agent begins Unverified: a tiny 0.0005 ETH/epoch envelope, no delegation, no treasury. Authority is earned, not granted."
             disabled={!isRegistered}
           >
             {isRegistered && (
-              <button className="btn-primary" onClick={createAgent} disabled={isPending}>
+              <button className="btn btn-primary btn-large" onClick={createAgent} disabled={isPending}>
                 Authorize new agent
               </button>
             )}
@@ -298,7 +291,7 @@ export default function PassportFlow() {
           >
             {agentId !== undefined && (
               <div className="flex flex-col gap-2">
-                <button className="btn-ghost" onClick={requestVerification} disabled={isPending}>
+                <button className="btn btn-ghost btn-large" onClick={requestVerification} disabled={isPending}>
                   Request verification
                 </button>
                 <p className="text-xs text-white/40">
@@ -317,7 +310,7 @@ export default function PassportFlow() {
             disabled={(cred?.verifiedCount ?? 0n) === 0n}
           >
             {agentId !== undefined && (
-              <button className="btn-primary" onClick={levelUp} disabled={isPending}>
+              <button className="btn btn-primary btn-large" onClick={levelUp} disabled={isPending}>
                 Level up
               </button>
             )}
@@ -331,7 +324,7 @@ export default function PassportFlow() {
             disabled={(cred?.level ?? 0) < 1}
           >
             {agentId !== undefined && !cred?.hasPassport && (
-              <button className="btn-primary" onClick={issuePassport} disabled={isPending}>
+              <button className="btn btn-primary btn-large" onClick={issuePassport} disabled={isPending}>
                 Issue passport
               </button>
             )}
@@ -346,7 +339,7 @@ export default function PassportFlow() {
           >
             {agentId !== undefined && (
               <div className="flex items-center gap-3">
-                <button className="btn-primary" onClick={attempt("0.02")}>
+                <button className="btn btn-primary btn-large" onClick={attempt("0.02")}>
                   Retry 0.02 ETH action
                 </button>
                 <ResultPill r={lastActionResult} />
@@ -364,8 +357,8 @@ export default function PassportFlow() {
             cred={cred}
             rights={rights}
           />
-          <div className="card">
-            <div className="mb-2 flex items-center gap-2 text-sm text-white/50">
+          <div className="card dashboard-activity">
+            <div className="mb-2 flex items-center gap-2 text-sm text-white/70">
               <Sparkles size={14} /> Activity
             </div>
             <div className="space-y-1.5 text-xs">
@@ -407,26 +400,51 @@ function Step({
   disabled?: boolean;
   children?: React.ReactNode;
 }) {
+  const colors = [
+    "#00d1b2",
+    "#8b5cf6",
+    "#f472b6",
+    "#fb7185",
+    "#f59e0b",
+    "#22c55e",
+    "#e879f9",
+    "#f97316",
+  ];
+  const accent = colors[(n - 1) % colors.length];
+  const nextAccent = colors[n % colors.length];
+
   return (
     <motion.div
       layout
-      className={`card transition ${disabled ? "opacity-40" : ""}`}
-      style={{ borderColor: done ? "#34d39955" : undefined }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={disabled ? undefined : { y: -4 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+      className={`card transition-all duration-300 ${disabled ? "opacity-70 grayscale-[0.05]" : "hover:shadow-[0_26px_90px_-52px_rgba(0,0,0,0.55)]"}`}
+      style={{
+        borderColor: done ? `${accent}80` : `${accent}40`,
+        background: `linear-gradient(180deg, rgba(7, 10, 22, 0.94), rgba(10, 14, 28, 0.92)), radial-gradient(circle at 16% 20%, ${accent}24, transparent 36%), radial-gradient(circle at 86% 20%, ${nextAccent}18, transparent 32%), radial-gradient(circle at 50% 78%, ${accent}12, transparent 22%)`,
+      }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-4">
         <div
-          className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-semibold"
+          className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold"
           style={{
-            background: done ? "#34d39922" : "#ffffff0d",
-            color: done ? "#34d399" : "#fff",
+            background: done
+              ? `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.24), transparent 24%), radial-gradient(circle at 65% 65%, ${accent}24, transparent 40%), linear-gradient(135deg, rgba(8, 12, 22, 0.96), rgba(16, 24, 44, 0.92))`
+              : `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.16), transparent 24%), radial-gradient(circle at 65% 65%, ${nextAccent}18, transparent 38%), linear-gradient(135deg, rgba(8, 12, 22, 0.92), rgba(12, 18, 34, 0.96))`,
+            color: "#ffffff",
+            boxShadow: done
+              ? `0 0 0 1px rgba(255,255,255,0.08), 0 0 0 4px ${accent}22`
+              : `0 0 0 1px rgba(255,255,255,0.08), 0 0 0 3px ${nextAccent}18`,
           }}
         >
-          {done ? <CheckCircle2 size={16} /> : n}
+          {done ? <CheckCircle2 size={18} /> : n}
         </div>
         <div className="flex-1">
-          <div className="font-medium">{title}</div>
-          <div className="mt-1 text-sm text-white/50">{desc}</div>
-          {children && <div className="mt-3">{children}</div>}
+          <div className="text-lg font-semibold text-white">{title}</div>
+          <div className="mt-2 text-sm leading-6 text-white/65">{desc}</div>
+          {children && <div className="mt-4">{children}</div>}
         </div>
       </div>
     </motion.div>

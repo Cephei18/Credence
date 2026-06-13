@@ -8,7 +8,8 @@
     "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "node": "hardhat node",
-    "resolve": "hardhat run scripts/resolve.ts --network localhost"
+    "resolve": "hardhat run scripts/resolve.ts --network localhost",
+    "simulate": "ts-node scripts/simulateSource.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

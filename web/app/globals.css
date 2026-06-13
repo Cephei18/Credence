@@ -4,31 +4,115 @@
 
 :root {
   color-scheme: dark;
+  --bg: #08101f;
+  --bg-soft: rgba(8, 16, 31, 0.92);
+  --surface: rgba(16, 24, 55, 0.82);
+  --surface-strong: rgba(20, 34, 66, 0.96);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #eef3ff;
+  --muted: #b9c5ff;
+  --green: #048b7b;
+  --cyan: #6bf1cb;
+  --pink: #cba2ca;
+  --purple: #6662a7;
+  --blue: #5fa6ed;
+  --navy: #203053;
+  --gold: #f3ac67;
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 70% -10%, rgba(124, 92, 255, 0.18), transparent),
-    radial-gradient(900px 500px at 10% 110%, rgba(34, 211, 238, 0.12), transparent),
-    #0a0a0f;
-  color: #e7e7ee;
   min-height: 100vh;
+  color: var(--text);
+  position: relative;
+  background:
+    radial-gradient(900px 900px at 15% 10%, rgba(0, 255, 164, 0.16), transparent),
+    radial-gradient(800px 800px at 85% 20%, rgba(255, 88, 168, 0.14), transparent),
+    radial-gradient(1200px 650px at 50% 0%, rgba(255, 88, 168, 0.08), transparent),
+    linear-gradient(180deg, #08101f 0%, #0b1423 45%, #101a2f 100%);
+  font-family: Inter, "Inter var", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  background: linear-gradient(135deg, rgba(0, 255, 164, 0.14), transparent 18%, rgba(255, 88, 168, 0.12) 45%, transparent 65%, rgba(0, 255, 164, 0.08));
+}
+
+body::after {
+  background-image:
+    radial-gradient(circle at 20% 15%, rgba(0, 255, 164, 0.14), transparent 22%),
+    radial-gradient(circle at 80% 25%, rgba(255, 88, 168, 0.14), transparent 18%),
+    linear-gradient(135deg, rgba(255, 88, 168, 0.08) 0%, transparent 38%, rgba(0, 255, 164, 0.08) 60%, transparent 100%);
+  opacity: 0.95;
+  transform: translateY(-10px);
 }
 
 .card {
-  @apply rounded-2xl border border-edge bg-panel/70 backdrop-blur p-6 shadow-xl;
+  @apply rounded-[2rem] border p-6 shadow-[0_30px_70px_-35px_rgba(0,0,0,0.75)];
+  background: rgba(15, 25, 48, 0.8);
+  border-color: var(--border);
+  backdrop-filter: blur(32px);
+}
+
+.dashboard-header {
+  background: linear-gradient(135deg, rgba(0, 255, 164, 0.14), rgba(255, 88, 168, 0.16), rgba(0, 255, 164, 0.08));
+  border-color: rgba(0, 255, 164, 0.22);
+}
+
+.dashboard-activity {
+  background: linear-gradient(135deg, rgba(0, 255, 164, 0.12), rgba(255, 88, 168, 0.18));
+  border-color: rgba(255, 88, 168, 0.22);
+}
+
+.dashboard-title {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.03em;
+  font-weight: 800;
 }
 
 .btn {
-  @apply rounded-xl px-4 py-2.5 font-medium transition disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply rounded-2xl px-5 py-3 text-sm font-semibold transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+}
+.btn-large {
+  @apply rounded-2xl px-6 py-4 text-base tracking-wide;
 }
 .btn-primary {
-  @apply btn bg-accent text-white hover:brightness-110;
+  @apply text-white;
+  background: linear-gradient(135deg, rgba(0, 255, 164, 0.95), rgba(255, 88, 168, 0.95), rgba(255, 204, 96, 0.94));
+  background-size: 220% 220%;
+  box-shadow: 0 24px 80px -30px rgba(0, 255, 164, 0.25);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+  background-position: 100% 0;
 }
 .btn-ghost {
-  @apply btn border border-edge hover:border-accent/60;
+  @apply text-white/85 border;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.11);
 }
 
 .pill {
   @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+code {
+  @apply rounded-xl bg-white/5 px-1.5 py-0.5 text-sm text-white/80 font-mono;
+}
+
+::selection {
+  background: rgba(0, 255, 164, 0.28);
 }

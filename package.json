@@ -1,0 +1,16 @@
+{
+  "name": "agent-passport",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Agent Passport — onchain credential & rights system where autonomous agents earn delegated authority through verified behavior.",
+  "workspaces": [
+    "contracts",
+    "web"
+  ],
+  "scripts": {
+    "test": "npm --workspace contracts run test",
+    "compile": "npm --workspace contracts run compile",
+    "deploy:baseSepolia": "npm --workspace contracts run deploy:baseSepolia",
+    "web": "npm --workspace web run dev"
+  }
+}

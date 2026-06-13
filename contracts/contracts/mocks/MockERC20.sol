@@ -26,4 +26,11 @@ contract MockERC20 is ERC20 {
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
+
+    /// @notice Open burn (sandbox only). Lets ManagedTreasury simulate
+    ///         oracle-priced swaps by burning the in-asset and minting the
+    ///         out-asset; reverts if `from` lacks balance.
+    function burn(address from, uint256 amount) external {
+        _burn(from, amount);
+    }
 }

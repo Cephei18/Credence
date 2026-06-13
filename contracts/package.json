@@ -11,7 +11,8 @@
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "node": "hardhat node",
     "resolve": "hardhat run scripts/resolve.ts --network localhost",
-    "simulate": "ts-node scripts/simulateSource.ts"
+    "simulate": "ts-node scripts/simulateSource.ts",
+    "simulate:cre": "ts-node scripts/simulateWorkflow.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

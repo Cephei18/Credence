@@ -6,6 +6,8 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "deploy:chainlink": "hardhat run scripts/deployChainlink.ts --network baseSepolia",
+    "smoke:chainlink": "hardhat run scripts/smokeTestChainlink.ts --network baseSepolia",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "node": "hardhat node",
     "resolve": "hardhat run scripts/resolve.ts --network localhost",

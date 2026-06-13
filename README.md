@@ -59,6 +59,23 @@ wired only when present, so the base protocol is unchanged without it. Full
 write-up — architecture, event spec, state machine, security review, migration —
 in [docs/CREDENTIAL_ENGINE.md](docs/CREDENTIAL_ENGINE.md).
 
+On top of that, a **Typed Attestation System** ensures credentials are earned
+only from domain-specific verified outcomes — Research credentials from Research
+attestations, Treasury from Treasury, etc. — with configurable thresholds, stake
+and violation gating, and permanent attestation provenance
+([docs/ATTESTATION_SYSTEM.md](docs/ATTESTATION_SYSTEM.md)).
+
+### Treasury Credential Framework
+
+The flagship use case: a **trust framework for autonomous treasury agents**. An
+agent earns treasury authority only by walking a verifiable pathway —
+**Research → Risk → Treasury** credentials, each from its own independent
+attestations, prerequisite-gated and stake-backed — enforced through
+credential-derived treasury tiers (simulation → small → higher-value execution)
+at a dedicated `attemptTreasuryAction` chokepoint. It answers *"why is this AI
+agent allowed to touch treasury funds?"* with a complete attestation chain. See
+[docs/TREASURY_FRAMEWORK.md](docs/TREASURY_FRAMEWORK.md).
+
 ## Rights model
 
 | Level | Name | Spend / epoch | Delegation | Treasury | Governance | Verified outcomes needed | Min principal stake |
@@ -78,7 +95,7 @@ npm install
 
 # 2. compile + test the protocol
 npm run compile
-npm test          # 21 passing — progression + attack cases + credential engine
+npm test          # 36 passing — progression + attacks + credential engine + typed attestations + treasury
 
 # 3. run a local chain (terminal A)
 npm --workspace contracts run node

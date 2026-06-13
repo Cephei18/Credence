@@ -18,6 +18,7 @@ library RightsResolver {
     uint8 internal constant PREDICTION = 2;
     uint8 internal constant EXECUTION = 3;
     uint8 internal constant GOVERNANCE = 4;
+    uint8 internal constant RISK = 5; // prerequisite credential on the treasury pathway
 
     struct ResolvedRights {
         uint256 spendTier;      // 0 none · 1 verified · 2 trusted · 3 autonomous

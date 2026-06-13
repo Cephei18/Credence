@@ -13,18 +13,28 @@ pragma solidity ^0.8.24;
 ///         wired (`address != 0`), so the base protocol is unaffected when no
 ///         engine is set — this is the backward-compatibility guarantee.
 interface ICredentialEngine {
-    /// @notice Append an immutable attestation to an agent's verification history.
-    /// @param vType   Verification/credential category (see CredentialType).
-    /// @param outcome True on a verified success, false on a failure.
-    /// @param impact  Signed effect on credential strength (+1 / -1 for MVP).
-    /// @param source  The verifier that produced this outcome (trust source).
+    /// @notice Append an immutable, typed attestation to an agent's history.
+    /// @param vType    Attestation/credential category (see CredentialType).
+    /// @param outcome  True on a verified success, false on a failure.
+    /// @param impact   Signed effect on credential strength (+1 / -1 for MVP).
+    /// @param source   The verifier that produced this outcome (trust source).
+    /// @param taskId   The verified task/claim id (provenance).
+    /// @param metadata Compact attestation metadata (provenance).
     function recordVerification(
         uint256 agentId,
         uint8 vType,
         bool outcome,
         int8 impact,
-        address source
+        address source,
+        bytes32 taskId,
+        bytes32 metadata
     ) external;
+
+    /// @notice Evaluate whether a typed attestation now makes the matching
+    ///         credential eligible, and issue+activate it if so. Idempotent and
+    ///         no-op when the credential's requirement is disabled. `sponsorStake`
+    ///         is supplied by AgentPassport (which owns stake accounting).
+    function evaluateFromAttestation(uint256 agentId, uint8 ctype, uint256 sponsorStake) external;
 
     /// @notice Record a violation and let credential state respond to it
     ///         (severity 2 suspends active credentials, severity ≥3 revokes them).

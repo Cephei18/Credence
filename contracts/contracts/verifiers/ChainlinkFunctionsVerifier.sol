@@ -35,8 +35,14 @@ contract ChainlinkFunctionsVerifier is FunctionsClient, Ownable, IOutcomeVerifie
 
     struct Pending {
         uint256 agentId;
+        uint8 attType;   // attestation category being evaluated
         bool exists;
     }
+
+    /// @notice Human-readable category names indexed by attestation type, passed
+    ///         to the DON as the first argument so the source evaluates (and can
+    ///         echo) the exact category requested.
+    string[6] public categoryNames = ["research", "treasury", "prediction", "execution", "governance", "risk"];
 
     mapping(bytes32 => Pending) public requests; // Chainlink requestId => agent
 
@@ -79,11 +85,20 @@ contract ChainlinkFunctionsVerifier is FunctionsClient, Ownable, IOutcomeVerifie
     ) external override returns (bytes32 requestId) {
         if (msg.sender != address(consumer)) revert OnlyConsumer();
 
+        // AgentPassport threads the category: parameters = abi.encode(uint8 attType, bytes innerArgs).
+        (uint8 attType, bytes memory inner) = abi.decode(parameters, (uint8, bytes));
+        string[] memory innerArgs = inner.length > 0 ? abi.decode(inner, (string[])) : new string[](0);
+
         FunctionsRequest.Request memory req;
         req.initializeRequestForInlineJavaScript(source);
 
-        string[] memory args = abi.decode(parameters, (string[]));
-        if (args.length > 0) req.setArgs(args);
+        // Pass the category as args[0] so the DON source evaluates exactly it.
+        string[] memory args = new string[](innerArgs.length + 1);
+        args[0] = attType < 6 ? categoryNames[attType] : "unknown";
+        for (uint256 i = 0; i < innerArgs.length; i++) {
+            args[i + 1] = innerArgs[i];
+        }
+        req.setArgs(args);
 
         requestId = _sendRequest(
             req.encodeCBOR(),
@@ -91,7 +106,7 @@ contract ChainlinkFunctionsVerifier is FunctionsClient, Ownable, IOutcomeVerifie
             callbackGasLimit,
             donId
         );
-        requests[requestId] = Pending({agentId: agentId, exists: true});
+        requests[requestId] = Pending({agentId: agentId, attType: attType, exists: true});
         emit VerificationRequested(requestId, agentId, taskId);
     }
 

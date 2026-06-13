@@ -102,6 +102,11 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     /// @notice Stake burned per violation (capped at remaining stake).
     uint256 public slashPerViolation = 0.005 ether;
 
+    /// @notice Per-treasury-tier value cap (wei). Tier 0 = none (any value
+    ///         reverts), Tier 1 = simulation only (value must be 0), Tier 2 =
+    ///         small execution, Tier 3 = higher execution. Owner-configurable.
+    uint256[4] public treasuryTierCap = [uint256(0), 0, 1 ether, 10 ether];
+
     IOutcomeVerifier public verifier;
     IPassportNameRegistry public nameRegistry;
 
@@ -110,9 +115,24 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     ///         is guarded, which is the backward-compatibility guarantee.
     ICredentialEngine public credentialEngine;
 
-    /// @notice Default verification category recorded in history when a typed
-    ///         request isn't supplied (Prediction = index 2 in CredentialType).
-    uint8 public constant DEFAULT_VERIFICATION_TYPE = 2;
+    /// @notice Strongly-typed attestation categories. Indices MUST match
+    ///         CredentialRegistry.CredentialType so a typed attestation maps to
+    ///         exactly one credential type (no cross-type abuse). Extensible:
+    ///         new categories append here and add a requirement in the engine.
+    enum AttestationType {
+        Research,   // 0
+        Treasury,   // 1
+        Prediction, // 2
+        Execution,  // 3
+        Governance, // 4
+        Risk        // 5 — prerequisite on the treasury pathway
+    }
+
+    /// @notice Type assigned to the legacy untyped `requestVerification` path,
+    ///         kept only for backward compatibility. New integrations should use
+    ///         `requestTypedVerification`. (Replaces the old hardcoded default
+    ///         that was applied at fulfillment time.)
+    AttestationType public constant LEGACY_ATTESTATION_TYPE = AttestationType.Prediction;
 
     // ---------------------------------------------------------------------
     // Storage
@@ -124,6 +144,13 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
 
     /// @notice Open verification requests -> agent id (set by us, cleared on fulfill).
     mapping(bytes32 => uint256) public pendingVerification;
+
+    /// @notice Per-request attestation context, carried across the async verifier
+    ///         round-trip so the resolved attestation preserves its type and
+    ///         provenance. Cleared on fulfillment (replay protection).
+    mapping(bytes32 => uint8) public pendingAttType;
+    mapping(bytes32 => bytes32) public pendingTaskId;
+    mapping(bytes32 => bytes32) public pendingMetadata;
 
     // ---------------------------------------------------------------------
     // Events
@@ -144,6 +171,7 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     event CredentialEngineSet(address indexed engine);
     event RightsExpanded(uint256 indexed agentId, uint8 level, uint256 spendLimit);
     event PassportUpdated(uint256 indexed agentId);
+    event TreasuryActionAttempted(uint256 indexed agentId, uint256 amount, uint8 tier, bool allowed);
 
     // ---------------------------------------------------------------------
     // Errors
@@ -161,6 +189,8 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     error NotEligibleForPassport();
     error PassportAlreadyIssued();
     error StakeLocked();
+    error TreasuryTierTooLow(uint8 tier, uint256 cap, uint256 amount);
+    error NoTreasuryAuthority();
 
     constructor(address initialOwner) Ownable(initialOwner) {}
 
@@ -267,22 +297,112 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     }
 
     // ---------------------------------------------------------------------
+    // Treasury authority (credential-derived, domain-specific chokepoint)
+    // ---------------------------------------------------------------------
+
+    /// @notice The treasury authority tier an agent currently holds, derived
+    ///         purely from its ACTIVE credentials (not its level):
+    ///           0 — none        (no Risk / Treasury credential)
+    ///           1 — simulation  (Risk credential, no Treasury credential)
+    ///           2 — small exec  (Treasury credential active)
+    ///           3 — higher exec (full Research + Risk + Treasury chain)
+    ///         Tier 3 deliberately requires the complete attestation pathway, so
+    ///         reaching Autonomous via the level bridge alone caps at Tier 2.
+    function treasuryTier(uint256 agentId) public view returns (uint8) {
+        if (agents[agentId].principal == address(0)) revert UnknownAgent();
+        if (address(credentialEngine) == address(0)) return 0;
+        uint256 mask = credentialEngine.activeCredentialMask(agentId);
+        bool research = _hasCredential(mask, AttestationType.Research);
+        bool risk = _hasCredential(mask, AttestationType.Risk);
+        bool treasury = _hasCredential(mask, AttestationType.Treasury);
+        if (treasury && research && risk) return 3;
+        if (treasury) return 2;
+        if (risk) return 1;
+        return 0;
+    }
+
+    /// @notice Treasury enforcement chokepoint. Reverts unless the agent's
+    ///         credential-derived tier permits an action of `amount`. Tier 0
+    ///         blocks everything; Tier 1 permits only `amount == 0` (simulation).
+    ///         This is the "why is this agent allowed to touch treasury funds?"
+    ///         gate — the answer is its verifiable credential chain.
+    function attemptTreasuryAction(uint256 agentId, uint256 amount)
+        external
+        returns (bool allowed)
+    {
+        Agent storage a = agents[agentId];
+        if (a.principal == address(0)) revert UnknownAgent();
+        if (a.paused) revert AgentIsPaused();
+
+        uint8 tier = treasuryTier(agentId);
+        if (tier == 0) {
+            emit TreasuryActionAttempted(agentId, amount, 0, false);
+            revert NoTreasuryAuthority();
+        }
+        uint256 cap = treasuryTierCap[tier];
+        if (amount > cap) {
+            emit TreasuryActionAttempted(agentId, amount, tier, false);
+            revert TreasuryTierTooLow(tier, cap, amount);
+        }
+        emit TreasuryActionAttempted(agentId, amount, tier, true);
+        return true;
+    }
+
+    function _hasCredential(uint256 mask, AttestationType t) internal pure returns (bool) {
+        return (mask >> uint8(t)) & 1 == 1;
+    }
+
+    // ---------------------------------------------------------------------
     // Verification (independent ground truth)
     // ---------------------------------------------------------------------
 
-    /// @notice Ask the trusted verifier to resolve an agent's claimed outcome.
-    ///         Anyone may trigger verification; only the verifier can resolve it.
+    /// @notice Legacy untyped request. Maps to LEGACY_ATTESTATION_TYPE for
+    ///         backward compatibility. Prefer `requestTypedVerification`.
     function requestVerification(
         uint256 agentId,
         bytes32 taskId,
         bytes calldata parameters
     ) external returns (bytes32 requestId) {
+        return _request(agentId, uint8(LEGACY_ATTESTATION_TYPE), taskId, parameters, bytes32(0));
+    }
+
+    /// @notice Request a domain-specific verification. The attestation type and
+    ///         metadata are recorded against the request and preserved when the
+    ///         verifier responds, so the credential is earned from a *typed*,
+    ///         independently verified outcome — never a self-reported success.
+    /// @param attType  Requested attestation category (see AttestationType).
+    /// @param taskId   Identifier of the claim being verified.
+    /// @param payload  Verifier payload (e.g. Chainlink Functions args), opaque here.
+    /// @param metadata Compact metadata stored on the resulting attestation.
+    function requestTypedVerification(
+        uint256 agentId,
+        AttestationType attType,
+        bytes32 taskId,
+        bytes calldata payload,
+        bytes32 metadata
+    ) external returns (bytes32 requestId) {
+        return _request(agentId, uint8(attType), taskId, payload, metadata);
+    }
+
+    function _request(
+        uint256 agentId,
+        uint8 attType,
+        bytes32 taskId,
+        bytes calldata payload,
+        bytes32 metadata
+    ) internal returns (bytes32 requestId) {
         Agent storage a = agents[agentId];
         if (a.principal == address(0)) revert UnknownAgent();
         require(address(verifier) != address(0), "no verifier");
 
-        requestId = verifier.requestVerification(agentId, taskId, parameters);
+        // Thread the attestation category through to the verifier so the DON
+        // evaluates the exact category requested (no generic verification).
+        bytes memory vparams = abi.encode(attType, payload);
+        requestId = verifier.requestVerification(agentId, taskId, vparams);
         pendingVerification[requestId] = agentId;
+        pendingAttType[requestId] = attType;
+        pendingTaskId[requestId] = taskId;
+        pendingMetadata[requestId] = metadata;
         emit VerificationRequested(agentId, requestId, taskId);
     }
 
@@ -293,7 +413,15 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
     {
         if (msg.sender != address(verifier)) revert NotVerifier();
         if (pendingVerification[requestId] != agentId) revert UnknownAgent();
+        // Replay protection: clearing the request makes a second fulfillment of
+        // the same requestId revert above (mapping no longer matches the agent).
         delete pendingVerification[requestId];
+        uint8 attType = pendingAttType[requestId];
+        bytes32 taskId = pendingTaskId[requestId];
+        bytes32 metadata = pendingMetadata[requestId];
+        delete pendingAttType[requestId];
+        delete pendingTaskId[requestId];
+        delete pendingMetadata[requestId];
 
         Agent storage a = agents[agentId];
         if (success) {
@@ -311,18 +439,29 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
         }
         emit OutcomeRecorded(agentId, success, a.verifiedCount, a.violations);
 
-        // Credential Engine: persist the attestation and, on failure, raise a
-        // major violation that suspends the agent's active credentials. Guarded
-        // so the base protocol is unchanged when no engine is wired.
+        // Credential Engine: persist the TYPED attestation, evaluate whether it
+        // makes the matching credential eligible, and on failure raise a major
+        // violation that suspends active credentials. Guarded so the base
+        // protocol is unchanged when no engine is wired.
         if (address(credentialEngine) != address(0)) {
             credentialEngine.recordVerification(
                 agentId,
-                DEFAULT_VERIFICATION_TYPE,
+                attType,
                 success,
                 success ? int8(1) : int8(-1),
-                msg.sender
+                msg.sender,
+                taskId,
+                metadata
             );
-            if (!success) {
+            if (success) {
+                // Typed attestation → credential: only the matching credential
+                // type can be earned, gated by its configured requirement.
+                credentialEngine.evaluateFromAttestation(
+                    agentId,
+                    attType,
+                    principals[a.principal].stake
+                );
+            } else {
                 credentialEngine.reportViolation(agentId, 2, "failed verification", msg.sender);
             }
             emit PassportUpdated(agentId);
@@ -438,6 +577,12 @@ contract AgentPassport is Ownable, ReentrancyGuard, IVerificationConsumer {
 
     function setSlashPerViolation(uint256 amount) external onlyOwner {
         slashPerViolation = amount;
+    }
+
+    /// @notice Configure the value cap for a treasury tier (1..3).
+    function setTreasuryTierCap(uint8 tier, uint256 cap) external onlyOwner {
+        require(tier >= 1 && tier <= 3, "tier 1..3");
+        treasuryTierCap[tier] = cap;
     }
 
     // ---------------------------------------------------------------------

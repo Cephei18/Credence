@@ -34,9 +34,10 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
         Treasury,   // 1
         Prediction, // 2
         Execution,  // 3
-        Governance  // 4
+        Governance, // 4
+        Risk        // 5 — prerequisite on the Research → Risk → Treasury pathway
     }
-    uint8 internal constant TYPE_COUNT = 5;
+    uint8 internal constant TYPE_COUNT = 6;
 
     /// @notice Explicit credential lifecycle. `None` = never issued.
     enum CredentialState {
@@ -56,13 +57,39 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
         uint64 verifications; // attestations backing this credential
     }
 
-    /// @notice One immutable entry in an agent's verification history.
+    /// @notice One immutable, typed entry in an agent's attestation history.
+    ///         Permanent protocol record: every credential is traceable to the
+    ///         typed attestations that produced it.
     struct Attestation {
-        uint8 vType;          // verification category (≈ CredentialType)
+        uint8 vType;          // attestation category (≈ CredentialType)
         bool outcome;         // success / failure
         int8 credentialImpact;// signed strength delta
         uint64 timestamp;
         address verifierSource;
+        bytes32 taskId;       // provenance: the verified task/claim
+        bytes32 metadata;     // provenance: compact attestation metadata
+    }
+
+    /// @notice Configurable eligibility for issuing a credential from typed
+    ///         attestations. A credential is earned only from attestations of
+    ///         its own type (no cross-type abuse).
+    struct CredentialRequirement {
+        bool enabled;                  // attestation-driven issuance active for this type
+        uint64 attestationsRequired;   // successful matching-type attestations needed
+        bool requireNoSevereViolations;// block issuance if any severe (sev≥3) violation
+        uint256 minSponsorStake;       // minimum sponsor stake (checked via passed-in value)
+    }
+
+    /// @notice Protocol-level definition of an attestation category: where the
+    ///         truth comes from, what "success" means, and how it affects the
+    ///         credential. Declarative and queryable so the verification a
+    ///         credential rests on is fully auditable.
+    struct AttestationTemplate {
+        bool defined;
+        address verifierSource;  // expected verifier (0 = any registered verifier)
+        bytes32 successCriteria; // commitment to the off-chain success definition / DON source
+        int8 credentialImpact;   // strength delta applied on success
+        string descriptor;       // human-readable (e.g. "ETH 24h price-direction call")
     }
 
     /// @notice A first-class violation record.
@@ -84,6 +111,18 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
     mapping(uint256 => Attestation[]) private _history;             // agentId => attestations
     mapping(uint256 => Violation[]) private _violations;            // agentId => violations
 
+    /// @notice Per-credential-type eligibility config (attestation-driven path).
+    mapping(uint8 => CredentialRequirement) public requirements;
+
+    /// @notice Bitmask of credential types that must already be Active before a
+    ///         given credential can be issued from attestations. Encodes the
+    ///         Research → Risk → Treasury pathway. Defaults to 0 (no prereqs),
+    ///         which preserves prior behavior.
+    mapping(uint8 => uint256) public prerequisites;
+
+    /// @notice Protocol-level template per attestation type.
+    mapping(uint8 => AttestationTemplate) public templates;
+
     // ---------------------------------------------------------------------
     // Events (protocol-grade — every state transition is observable)
     // ---------------------------------------------------------------------
@@ -100,8 +139,14 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
         bool outcome,
         int8 credentialImpact,
         address verifierSource,
+        bytes32 taskId,
+        bytes32 metadata,
         uint256 index
     );
+    event RequirementUpdated(uint8 indexed ctype, uint64 attestationsRequired, uint256 minSponsorStake);
+    event PrerequisitesUpdated(uint8 indexed ctype, uint256 prerequisiteMask);
+    event CredentialEarned(uint256 indexed agentId, uint8 indexed ctype, uint64 attestations);
+    event AttestationTemplateSet(uint8 indexed attType, address verifierSource, int8 credentialImpact);
     event ViolationReported(
         uint256 indexed agentId,
         uint8 severity,
@@ -233,7 +278,9 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
         uint8 vType,
         bool outcome,
         int8 impact,
-        address source
+        address source,
+        bytes32 taskId,
+        bytes32 metadata
     ) external onlyAuth {
         uint256 index = _history[agentId].length;
         _history[agentId].push(
@@ -242,13 +289,17 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
                 outcome: outcome,
                 credentialImpact: impact,
                 timestamp: uint64(block.timestamp),
-                verifierSource: source
+                verifierSource: source,
+                taskId: taskId,
+                metadata: metadata
             })
         );
+        // A successful attestation strengthens ONLY its own credential type —
+        // this is what prevents cross-type credential abuse.
         if (outcome && vType < TYPE_COUNT) {
             _creds[agentId][vType].verifications += 1;
         }
-        emit VerificationRecorded(agentId, vType, outcome, impact, source, index);
+        emit VerificationRecorded(agentId, vType, outcome, impact, source, taskId, metadata, index);
     }
 
     /// @inheritdoc ICredentialEngine
@@ -326,6 +377,115 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
     }
 
     // ---------------------------------------------------------------------
+    // Attestation-driven credential eligibility (the typed path)
+    // ---------------------------------------------------------------------
+
+    /// @notice Configure how a credential type is earned from typed attestations.
+    ///         Disabled by default for every type, so enabling it is an explicit,
+    ///         backward-compatible opt-in.
+    function setCredentialRequirement(
+        uint8 ctype,
+        bool enabled,
+        uint64 attestationsRequired,
+        bool requireNoSevereViolations,
+        uint256 minSponsorStake
+    ) external onlyOwner validType(ctype) {
+        requirements[ctype] = CredentialRequirement({
+            enabled: enabled,
+            attestationsRequired: attestationsRequired,
+            requireNoSevereViolations: requireNoSevereViolations,
+            minSponsorStake: minSponsorStake
+        });
+        emit RequirementUpdated(ctype, attestationsRequired, minSponsorStake);
+    }
+
+    /// @notice Set the credentials that must already be Active before `ctype`
+    ///         can be earned from attestations (e.g. Treasury requires Research
+    ///         and Risk). `prerequisiteMask` uses RightsResolver bit indices.
+    function setCredentialPrerequisites(uint8 ctype, uint256 prerequisiteMask)
+        external
+        onlyOwner
+        validType(ctype)
+    {
+        prerequisites[ctype] = prerequisiteMask;
+        emit PrerequisitesUpdated(ctype, prerequisiteMask);
+    }
+
+    /// @notice Register/replace the protocol template for an attestation type.
+    function setAttestationTemplate(
+        uint8 attType,
+        address verifierSource,
+        bytes32 successCriteria,
+        int8 credentialImpact,
+        string calldata descriptor
+    ) external onlyOwner validType(attType) {
+        templates[attType] = AttestationTemplate({
+            defined: true,
+            verifierSource: verifierSource,
+            successCriteria: successCriteria,
+            credentialImpact: credentialImpact,
+            descriptor: descriptor
+        });
+        emit AttestationTemplateSet(attType, verifierSource, credentialImpact);
+    }
+
+    function getAttestationTemplate(uint8 attType)
+        external
+        view
+        validType(attType)
+        returns (AttestationTemplate memory)
+    {
+        return templates[attType];
+    }
+
+    /// @inheritdoc ICredentialEngine
+    /// @dev Issues+activates `ctype` iff its requirement is enabled and met by
+    ///      the agent's matching-type attestation count (and, if configured, no
+    ///      severe violations and sufficient sponsor stake). Idempotent; never
+    ///      resurrects a Revoked credential (anti-farming after punishment).
+    function evaluateFromAttestation(uint256 agentId, uint8 ctype, uint256 sponsorStake)
+        external
+        onlyAuth
+        validType(ctype)
+    {
+        CredentialRequirement memory req = requirements[ctype];
+        if (!req.enabled) return;
+
+        Credential storage c = _creds[agentId][ctype];
+        if (c.state == CredentialState.Active) return;       // already held
+        if (c.state == CredentialState.Revoked) return;      // punished — no auto re-issue
+
+        if (c.verifications < req.attestationsRequired) return;
+        if (req.requireNoSevereViolations && _severeViolationCount(agentId) > 0) return;
+        if (sponsorStake < req.minSponsorStake) return;
+
+        // Pathway prerequisites: every required credential must already be Active
+        // (Research → Risk → Treasury). Prevents skipping the progression chain.
+        uint256 prereq = prerequisites[ctype];
+        if (prereq != 0 && (activeCredentialMask(agentId) & prereq) != prereq) return;
+
+        // None/Pending/Suspended/Expired → Active (issuing first if needed).
+        if (c.state == CredentialState.None || c.state == CredentialState.Expired) {
+            c.state = CredentialState.Pending;
+            c.issuedAt = uint64(block.timestamp);
+            c.updatedAt = uint64(block.timestamp);
+            c.expiresAt = 0;
+            emit CredentialIssued(agentId, ctype, 0);
+        }
+        c.state = CredentialState.Active;
+        c.updatedAt = uint64(block.timestamp);
+        emit CredentialActivated(agentId, ctype);
+        emit CredentialEarned(agentId, ctype, c.verifications);
+    }
+
+    function _severeViolationCount(uint256 agentId) internal view returns (uint256 n) {
+        Violation[] storage vs = _violations[agentId];
+        for (uint256 i = 0; i < vs.length; i++) {
+            if (vs[i].severity >= 3) n++;
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Views
     // ---------------------------------------------------------------------
 
@@ -379,7 +539,7 @@ contract CredentialRegistry is Ownable, ICredentialEngine {
     function listCredentials(uint256 agentId)
         external
         view
-        returns (CredentialState[5] memory states, uint64[5] memory expiries, uint64[5] memory verifications)
+        returns (CredentialState[6] memory states, uint64[6] memory expiries, uint64[6] memory verifications)
     {
         for (uint8 t = 0; t < TYPE_COUNT; t++) {
             states[t] = credentialState(agentId, t);

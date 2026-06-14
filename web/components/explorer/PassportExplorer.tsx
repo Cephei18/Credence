@@ -13,12 +13,19 @@ const STATE_STYLE: Record<string, string> = {
   Expired: "text-white/40 border-white/10",
 };
 
-function CredentialChip({ label, state }: { label: string; state: number }) {
+const CREDENTIAL_HELP = {
+  research: "Verified research claims that prove the agent can produce checkable work.",
+  risk: "Verified treasury discipline: the agent stayed inside the committed policy floor.",
+  treasury: "Verified stewardship that unlocks value-bearing treasury execution.",
+};
+
+function CredentialChip({ label, state, description }: { label: string; state: number; description: string }) {
   const name = CREDENTIAL_STATE[state] ?? "None";
   return (
-    <div className={`rounded-xl border px-3 py-2 ${STATE_STYLE[name]}`}>
+    <div className={`rounded-xl border px-3 py-2 ${STATE_STYLE[name]}`} title={`${label}: ${description} Status: ${name}.`}>
       <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
       <div className="text-sm font-semibold">{name}</div>
+      <div className="mt-1 text-[11px] leading-4 opacity-70">{description}</div>
     </div>
   );
 }
@@ -32,11 +39,11 @@ export function PassportExplorer({ agent, snap }: { agent: DemoAgent; snap: Cred
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-white/40">
-            <ShieldCheck size={14} /> Agent Passport
+            <ShieldCheck size={14} /> Authority summary
           </div>
           <div className="mt-1 text-2xl font-semibold">{agent.name}</div>
           <div className="mt-1 text-sm text-white/40">
-            Level {LEVELS[snap.level]} · verifications {snap.verifiedCount.toString()} ·{" "}
+            Protocol level {LEVELS[snap.level]} · verified outcomes {snap.verifiedCount.toString()} ·{" "}
             <span className={snap.violations > 0n ? "text-bad" : ""}>violations {snap.violations.toString()}</span>
           </div>
         </div>
@@ -48,9 +55,9 @@ export function PassportExplorer({ agent, snap }: { agent: DemoAgent; snap: Cred
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-2">
-        <CredentialChip label="Research" state={snap.states[ATT.Research]} />
-        <CredentialChip label="Risk" state={snap.states[ATT.Risk]} />
-        <CredentialChip label="Treasury" state={snap.states[ATT.Treasury]} />
+        <CredentialChip label="Research" state={snap.states[ATT.Research]} description={CREDENTIAL_HELP.research} />
+        <CredentialChip label="Risk" state={snap.states[ATT.Risk]} description={CREDENTIAL_HELP.risk} />
+        <CredentialChip label="Treasury" state={snap.states[ATT.Treasury]} description={CREDENTIAL_HELP.treasury} />
       </div>
 
       <div
@@ -58,7 +65,9 @@ export function PassportExplorer({ agent, snap }: { agent: DemoAgent; snap: Cred
         style={{ background: compliant ? "#34d39912" : "#f8717112", color: compliant ? "#34d399" : "#f87171" }}
       >
         {compliant ? <ShieldCheck size={15} /> : <AlertTriangle size={15} />}
-        {compliant ? "Disciplined agent — behavior verified across the window." : "Breaching agent — policy violated; authority withheld."}
+        {compliant
+          ? "Policy respected: behavior can be verified into treasury authority."
+          : "Policy breached: Risk failed, credentials suspended, authority withheld."}
       </div>
     </motion.div>
   );

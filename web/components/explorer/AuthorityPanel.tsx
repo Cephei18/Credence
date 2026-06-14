@@ -18,6 +18,22 @@ function Right({ icon, label, on }: { icon: React.ReactNode; label: string; on: 
 
 export function AuthorityPanel({ snap }: { snap: CredentialSnapshot }) {
   const { tier, tierCap, rights } = snap;
+  const unlocked =
+    tier === 0
+      ? "No treasury authority"
+      : tier === 1
+      ? "Simulation-only treasury access"
+      : tier === 2
+      ? `Small execution up to ${fmtUsd(tierCap)}`
+      : `Higher-value execution up to ${fmtUsd(tierCap)}`;
+  const explanation =
+    tier === 0
+      ? "No value-bearing treasury action can pass the protocol chokepoint."
+      : tier === 1
+      ? "Risk credential is active, so the agent may simulate allocations but cannot move value."
+      : tier === 2
+      ? "Treasury credential is active, so capped execution is allowed."
+      : "Research, Risk, and Treasury credentials are active, so the full treasury pathway has unlocked higher-value execution.";
   // Treasury action capability by tier (mirrors attemptTreasuryAction).
   const actions =
     tier === 0
@@ -34,19 +50,23 @@ export function AuthorityPanel({ snap }: { snap: CredentialSnapshot }) {
 
   return (
     <div className="card">
-      <div className="mb-3 text-sm uppercase tracking-widest text-white/40">Authority</div>
+      <div className="mb-3 text-sm uppercase tracking-widest text-white/40">Authority unlocked</div>
 
+      <div className="rounded-lg border border-edge bg-black/20 px-3 py-2">
+        <div className="text-[11px] uppercase tracking-wide text-white/40">Treasury tier {tier}</div>
+        <div className="text-sm font-semibold">{unlocked}</div>
+        <div className="mt-1 text-xs text-white/45">{explanation}</div>
+      </div>
+
+      <div className="mb-2 mt-4 text-[11px] uppercase tracking-wide text-white/40">Secondary passport rights</div>
       <div className="grid grid-cols-2 gap-2">
-        <Right icon={<Zap size={14} />} label="Spending" on={rights.spendLimitPerEpoch > 0n} />
+        <Right icon={<Zap size={14} />} label="Base spend" on={rights.spendLimitPerEpoch > 0n} />
         <Right icon={<Users size={14} />} label="Delegation" on={rights.canDelegate} />
-        <Right icon={<Coins size={14} />} label="Treasury" on={rights.treasuryAccess} />
+        <Right icon={<Coins size={14} />} label="Treasury path" on={tier > 0} />
         <Right icon={<Vote size={14} />} label="Governance" on={rights.governanceAccess} />
       </div>
 
-      <div className="mt-4 rounded-lg border border-edge bg-black/20 px-3 py-2">
-        <div className="text-[11px] uppercase tracking-wide text-white/40">Treasury tier {tier}</div>
-        <div className="text-sm">{TREASURY_TIER_LABEL[tier]}</div>
-      </div>
+      <div className="mt-3 text-xs text-white/40">Treasury-specific authority is credential-derived: {TREASURY_TIER_LABEL[tier]}.</div>
 
       <div className="mt-3 space-y-1.5">
         {actions.map((a, i) => (

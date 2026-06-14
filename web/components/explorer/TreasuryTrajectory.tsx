@@ -13,6 +13,10 @@ export function TreasuryTrajectory({ points, policy }: { points: TrajectoryPoint
 
   const breached = stableSeries.some((b) => b < minStableBps);
   const worst = stableSeries.length ? Math.min(...stableSeries) : 10000;
+  const stableFloor = bpsToPct(minStableBps);
+  const consequence = breached
+    ? "Consequence: Risk attestation fails, credentials are suspended, and treasury authority stays locked."
+    : "Consequence: behavior satisfies the policy path and can be verified into treasury authority.";
 
   return (
     <div className="card">
@@ -29,8 +33,11 @@ export function TreasuryTrajectory({ points, policy }: { points: TrajectoryPoint
           {breached ? "policy breached" : "policy respected"}
         </span>
       </div>
+      <p className="mb-2 text-xs text-white/40">
+        Policy: stable allocation must never fall below {stableFloor}. Chainlink verifies the whole window, not a snapshot.
+      </p>
       <p className="mb-3 text-xs text-white/40">
-        Verified across the entire window — a single dip below the floor fails the credential. Worst stable ratio: {bpsToPct(worst)}.
+        Worst stable ratio: <span className={breached ? "text-bad" : "text-good"}>{bpsToPct(worst)}</span>. {consequence}
       </p>
 
       <div className="space-y-4">

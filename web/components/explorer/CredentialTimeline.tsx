@@ -7,6 +7,14 @@ type Row =
   | { kind: "attestation"; ts: number; data: Attestation }
   | { kind: "violation"; ts: number; data: Violation };
 
+function attestationConsequence(cat: string, outcome: boolean) {
+  if (!outcome) return "Consequence: credential denied and a violation is recorded.";
+  if (cat === "Research") return "Consequence: counts toward the Research credential.";
+  if (cat === "Risk") return "Consequence: unlocks the Risk credential and simulation-tier treasury authority.";
+  if (cat === "Treasury") return "Consequence: unlocks value-bearing treasury execution.";
+  return "Consequence: strengthens the matching credential type.";
+}
+
 export function CredentialTimeline({ attestations, violations }: { attestations: Attestation[]; violations: Violation[] }) {
   const rows: Row[] = [
     ...attestations.map((a) => ({ kind: "attestation" as const, ts: Number(a.timestamp), data: a })),
@@ -15,8 +23,8 @@ export function CredentialTimeline({ attestations, violations }: { attestations:
 
   return (
     <div className="card">
-      <div className="mb-1 text-sm uppercase tracking-widest text-white/40">Credential timeline</div>
-      <p className="mb-3 text-xs text-white/40">Attestation → Credential → Authority. Every credential traces to verified outcomes.</p>
+      <div className="mb-1 text-sm uppercase tracking-widest text-white/40">Verification and credential timeline</div>
+      <p className="mb-3 text-xs text-white/40">Verified behavior -&gt; typed attestation -&gt; credential state -&gt; authority. Every credential traces to outcomes.</p>
 
       {rows.length === 0 && <div className="text-sm text-white/30">No verification activity yet.</div>}
 
@@ -26,6 +34,7 @@ export function CredentialTimeline({ attestations, violations }: { attestations:
           if (r.kind === "attestation") {
             const a = r.data;
             const cat = CREDENTIAL_TYPES[a.vType] ?? `type ${a.vType}`;
+            const consequence = attestationConsequence(cat, a.outcome);
             return (
               <div key={i} className="relative">
                 <div className="absolute -left-[13px] top-1.5 h-2.5 w-2.5 rounded-full" style={{ background: a.outcome ? "#34d399" : "#f87171" }} />
@@ -37,6 +46,7 @@ export function CredentialTimeline({ attestations, violations }: { attestations:
                 <div className="text-xs text-white/40">
                   impact {a.credentialImpact > 0 ? "+" : ""}{a.credentialImpact} · source {a.verifierSource.slice(0, 8)}…
                 </div>
+                <div className="text-xs text-white/50">{consequence}</div>
               </div>
             );
           }
@@ -47,7 +57,9 @@ export function CredentialTimeline({ attestations, violations }: { attestations:
               <div className="flex items-center gap-2 text-sm text-bad">
                 <AlertTriangle size={15} /> <span className="font-medium">Violation (sev {v.severity})</span>
               </div>
-              <div className="text-xs text-white/40">{v.reason} → active credentials suspended/revoked</div>
+              <div className="text-xs text-white/40">
+                {v.reason}. Consequence: active credentials suspended and treasury authority withheld.
+              </div>
             </div>
           );
         })}

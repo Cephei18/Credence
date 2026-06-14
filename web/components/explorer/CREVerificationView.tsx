@@ -7,11 +7,11 @@ import { ATT, type CredentialSnapshot, type DemoAgent, type DemoConfig } from "@
 import { verifyLive, type VerifyStep } from "@/lib/creVerify";
 
 const STEPS: { key: VerifyStep; label: string }[] = [
-  { key: "request", label: "Emit WorkflowTrigger" },
-  { key: "compute", label: "CRE workflow verifies trajectory" },
-  { key: "verdict", label: "Verdict" },
-  { key: "write", label: "Write verdict on-chain" },
-  { key: "done", label: "Credential issued" },
+  { key: "request", label: "Open typed request" },
+  { key: "compute", label: "Replay trajectory" },
+  { key: "verdict", label: "Return PASS/FAIL" },
+  { key: "write", label: "Write verdict" },
+  { key: "done", label: "Update credential" },
 ];
 
 export function CREVerificationView({
@@ -57,11 +57,13 @@ export function CREVerificationView({
   return (
     <div className="card">
       <div className="mb-1 flex items-center gap-2 text-sm uppercase tracking-widest text-white/40">
-        <Workflow size={14} /> CRE verification
+        <Workflow size={14} /> Chainlink CRE verification
       </div>
+      <p className="mb-2 text-xs text-white/40">
+        What: replay the treasury action history against the committed policy. Who: Chainlink CRE workflow. Why: the agent cannot self-report success.
+      </p>
       <p className="mb-3 text-xs text-white/40">
-        WorkflowTrigger → CRE workflow → verdict → credential. Runs the real workflow handler in-browser, then writes the
-        verdict through CREReceiver.
+        Local demo runs the same workflow handler in-browser, then writes the verdict through CREReceiver.
       </p>
 
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -76,7 +78,7 @@ export function CREVerificationView({
             >
               {s.label}
             </span>
-            {i < STEPS.length - 1 && <span className="text-white/20">→</span>}
+            {i < STEPS.length - 1 && <span className="text-white/20">-&gt;</span>}
           </span>
         ))}
       </div>
@@ -84,18 +86,18 @@ export function CREVerificationView({
       <div className="mt-4">
         {treasuryActive ? (
           <div className="flex items-center gap-2 text-sm text-good">
-            <CheckCircle2 size={16} /> Treasury credential active — authority earned.
+            <CheckCircle2 size={16} /> Treasury credential active: Tier 3 authority earned.
           </div>
         ) : eligible ? (
           <button className="btn-primary flex items-center gap-2" onClick={run} disabled={running}>
             {running ? <Loader2 size={16} className="animate-spin" /> : <Workflow size={16} />}
-            Verify Treasury via CRE
+            Run Chainlink CRE verification
           </button>
         ) : (
           <div className="text-sm text-white/40">
             {agent.flavor === "breaching"
-              ? "Prerequisites not met (Risk failed) — Treasury verification unavailable."
-              : "Awaiting Research + Risk credentials."}
+              ? "Risk credential failed, so Treasury verification is unavailable and authority remains Tier 0."
+              : "Awaiting Research + Risk credentials before treasury authority can be evaluated."}
           </div>
         )}
 

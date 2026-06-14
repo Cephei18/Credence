@@ -33,12 +33,11 @@ const localChain = defineChain({
 // LOCAL ONLY: on any non-local chain an explicit OPERATOR_PRIVATE_KEY is required.
 const LOCAL_DEFAULT_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-let _cfg: DemoConfig | null = null;
 export async function loadConfig(): Promise<DemoConfig> {
-  if (_cfg) return _cfg;
+  // Read fresh every time: a reseed rewrites demo.json with new addresses, and a
+  // cached config would make the server sign against a dead deployment.
   const file = path.join(process.cwd(), "public", "demo.json");
-  _cfg = JSON.parse(await fs.readFile(file, "utf8")) as DemoConfig;
-  return _cfg;
+  return JSON.parse(await fs.readFile(file, "utf8")) as DemoConfig;
 }
 
 function chainFor(chainId: number) {

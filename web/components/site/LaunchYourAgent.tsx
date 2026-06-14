@@ -147,8 +147,17 @@ function LaunchInner({ cfg }: { cfg: DemoConfig }) {
       setView(v);
       setPhase("earned");
     } catch (e: any) {
-      setErr(e?.shortMessage ?? e?.message ?? "verification failed");
-      setPhase("zero");
+      const msg = e?.shortMessage ?? e?.message ?? "verification failed";
+      const stale = /doesn't exist|UnknownAgent|0x0df2949d/.test(msg);
+      setErr(stale ? "This agent is no longer on the chain (it was reset). Click “Create my agent” to start fresh." : msg);
+      // If the agent vanished (chain reseeded), drop back so the user can recreate.
+      if (stale) {
+        setAgentId(null);
+        setView(null);
+        setPhase("ready");
+      } else {
+        setPhase("zero");
+      }
     }
   }
 

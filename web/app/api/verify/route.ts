@@ -14,6 +14,10 @@ export const dynamic = "force-dynamic";
 
 const PASSPORT_ABI = parseAbi([
   "function requestTypedVerification(uint256,uint8,bytes32,bytes,bytes32) returns (bytes32)",
+  // declared so viem can decode a custom revert into a readable name
+  "error UnknownAgent()",
+  "error AgentIsPaused()",
+  "error NotVerifier()",
 ]);
 const CRE_ABI = parseAbi(["function fulfillFromWorkflow(bytes32,bool)"]);
 const WORKFLOW_TRIGGER = parseAbi([
@@ -72,6 +76,26 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ requestId, verdict });
   } catch (e: any) {
+    // viem stashes the decoded custom-error name in metaMessages (and the raw
+    // selector deep in the cause), not in shortMessage — search all of them.
+    const hay = [
+      e?.shortMessage,
+      e?.message,
+      Array.isArray(e?.metaMessages) ? e.metaMessages.join(" ") : "",
+      typeof e?.walk === "function" ? e.walk((x: any) => x?.data?.errorName)?.data?.errorName : "",
+    ]
+      .filter(Boolean)
+      .map(String)
+      .join(" | ");
+
+    // UnknownAgent (0x0df2949d): the id doesn't exist on the current deployment,
+    // usually a stale agent after the chain was reseeded.
+    if (hay.includes("UnknownAgent") || hay.includes("0x0df2949d")) {
+      return NextResponse.json(
+        { error: "This agent doesn't exist on the current chain (it may have been reset). Refresh the page and create a new agent." },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: e?.shortMessage ?? e?.message ?? "verification failed" }, { status: 500 });
   }
 }

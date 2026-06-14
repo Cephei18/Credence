@@ -1,11 +1,11 @@
 {
   "chainId": 31337,
   "contracts": {
-    "passport": "0x5067457698Fd6Fa1C6964e416b3f42713513B3dD",
-    "engine": "0x4b6aB5F819A515382B0dEB6935D793817bB4af28",
-    "registry": "0x18E317A7D70d8fBf8e6E893616b52390EbBdb629",
-    "creReceiver": "0xCace1b78160AE76398F486c8a18044da0d66d86D",
-    "feed": "0x5bf5b11053e734690269C6B9D438F8C9d48F528A"
+    "passport": "0xefc1aB2475ACb7E60499Efb171D173be19928a05",
+    "engine": "0xD49a0e9A4CD5979aE36840f542D2d7f02C4817Be",
+    "registry": "0x870526b7973b56163a6997bB7C886F5E4EA53638",
+    "creReceiver": "0xe1Fd27F4390DcBE165f4D60DBF821e4B9Bb02dEd",
+    "feed": "0xB06c856C8eaBd1d8321b687E188204C1018BC4E5"
   },
   "workflowSender": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "abi": {
@@ -17,7 +17,7 @@
       "id": "1",
       "name": "Agent Alpha",
       "flavor": "compliant",
-      "treasury": "0xab16A69A5a8c12C732e0DEFF4BE56A70bb64c926",
+      "treasury": "0x045857BDEAE7C1c7252d611eB24eB55564198b4C",
       "operator": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "researchArgs": [
         "ETH-USD",
@@ -30,7 +30,7 @@
       "id": "2",
       "name": "Agent Beta",
       "flavor": "breaching",
-      "treasury": "0xfbAb4aa40C202E4e80390171E82379824f7372dd",
+      "treasury": "0x0Cf17D5DcDA9cF25889cEc9ae5610B0FB9725F65",
       "operator": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
       "researchArgs": [
         "ETH-USD",

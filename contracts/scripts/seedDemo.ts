@@ -29,8 +29,11 @@ const GET_POLICY_SELECTOR = ethers.id("getPolicy()").slice(0, 10);
 async function main() {
   const signers = await ethers.getSigners();
   const deployer = signers[0]; // owner / guardian / workflowSender
-  const betaSponsor = signers[1];
+  // On a public network (e.g. Base Sepolia) only the deployer key is loaded, so
+  // fall back to it as Beta's sponsor too. Locally signers[1] is a distinct EOA.
+  const betaSponsor = signers[1] ?? deployer;
   console.log(`Network: ${network.name}  Deployer: ${deployer.address}`);
+  console.log(`Beta sponsor: ${betaSponsor.address}${betaSponsor === deployer ? " (shared — single-key network)" : ""}`);
 
   const parentNode = ethers.namehash("agentpassport.eth");
 
@@ -115,7 +118,11 @@ async function main() {
   console.log(`Alpha id=${idA} treasury=${await treasuryA.getAddress()} worstStableBps=${worstA}`);
 
   // ---------- Agent Beta (breaching) ----------
-  await (await passport.connect(betaSponsor).registerPrincipal({ value: ethers.parseEther("0.5") })).wait();
+  // Register Beta's principal unless it's the shared single-key sponsor already
+  // registered above (registerPrincipal reverts AlreadyRegistered otherwise).
+  if (!(await passport.principals(betaSponsor.address)).registered) {
+    await (await passport.connect(betaSponsor).registerPrincipal({ value: ethers.parseEther("0.5") })).wait();
+  }
   const rcB = await (await passport.connect(betaSponsor).registerAgent(betaSponsor.address)).wait();
   const idB = parseAgentId(passport, rcB!);
   const treasuryB = await deployTreasury(idB, betaSponsor);

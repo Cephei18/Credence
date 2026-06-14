@@ -10,6 +10,7 @@
     "smoke:chainlink": "hardhat run scripts/smokeTestChainlink.ts --network baseSepolia",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "seed:demo": "hardhat run scripts/seedDemo.ts --network localhost",
+    "seed:baseSepolia": "hardhat run scripts/seedDemo.ts --network baseSepolia",
     "node": "hardhat node",
     "resolve": "hardhat run scripts/resolve.ts --network localhost",
     "simulate": "ts-node scripts/simulateSource.ts",

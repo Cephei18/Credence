@@ -12,6 +12,7 @@ contracts/typechain-types/
 web/.next/
 web/out/
 web/next-env.d.ts
+web/tsconfig.tsbuildinfo
 
 # misc
 .DS_Store

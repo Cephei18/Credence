@@ -21,7 +21,7 @@ export function TreasuryTrajectory({ points, policy }: { points: TrajectoryPoint
   return (
     <div className="card">
       <div className="mb-1 flex items-center justify-between">
-        <div className="text-sm uppercase tracking-widest text-white/40">Treasury trajectory</div>
+        <div className="text-sm uppercase tracking-widest text-white/40">1 · Behavior — Treasury trajectory</div>
         <span
           className="pill text-xs"
           style={{

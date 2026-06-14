@@ -84,6 +84,12 @@ export function fmtUsd(v: bigint): string {
 export function bpsToPct(bps: number | bigint): string {
   return `${(Number(bps) / 100).toFixed(1)}%`;
 }
+// Wei → a compact ETH authority string (e.g. "0.05 ETH").
+export function fmtEthAuthority(wei: bigint): string {
+  const eth = Number(wei) / 1e18;
+  const str = eth < 0.001 ? eth.toFixed(4) : eth < 1 ? eth.toFixed(3) : eth.toFixed(2);
+  return `${str.replace(/\.?0+$/, "")} ETH`;
+}
 
 // ---- read helpers ----
 export type CredentialSnapshot = {

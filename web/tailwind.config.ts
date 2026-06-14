@@ -9,22 +9,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0a0a13",
-        panel: "#131a2f",
-        edge: "#1e2745",
-        accent: "#048b7b",
-        accent2: "#6bf1cb",
-        accent3: "#5fa6ed",
-        glow: "#f3ac67",
-        fifa: "#203053",
-        lavender: "#cba2ca",
-        highlight: "#6662a7",
-        good: "#6bf1cb",
-        warn: "#f3ac67",
-        bad: "#f87171",
+        bg: "#07090e",
+        surface: "#0d1117",
+        edge: "rgba(255,255,255,0.07)",
+        accent: "#34d399", // emerald — brand / earned authority
+        secondary: "#6b93f5", // slate-blue — Chainlink verification
+        fail: "#fb7185", // rose — denied / breached
+        muted: "rgba(244,246,250,0.62)",
+        faint: "rgba(244,246,250,0.4)",
       },
       fontFamily: {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      maxWidth: {
+        narrative: "60rem",
       },
     },
   },

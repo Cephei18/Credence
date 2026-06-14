@@ -50,12 +50,28 @@ export function AuthorityPanel({ snap }: { snap: CredentialSnapshot }) {
 
   return (
     <div className="card">
-      <div className="mb-3 text-sm uppercase tracking-widest text-white/40">Authority unlocked</div>
+      <div className="mb-3 text-sm uppercase tracking-widest text-white/40">4 · Authority — unlocked</div>
 
       <div className="rounded-lg border border-edge bg-black/20 px-3 py-2">
         <div className="text-[11px] uppercase tracking-wide text-white/40">Treasury tier {tier}</div>
         <div className="text-sm font-semibold">{unlocked}</div>
         <div className="mt-1 text-xs text-white/45">{explanation}</div>
+        <div className="mt-3 flex items-center gap-1">
+          {[0, 1, 2, 3].map((t) => (
+            <div
+              key={t}
+              className="flex-1 rounded-md px-2 py-1 text-center text-[11px]"
+              title={TREASURY_TIER_LABEL[t]}
+              style={{
+                background: t === tier ? "#7c5cff22" : "#ffffff08",
+                color: t === tier ? "#c4b5fd" : "#ffffff55",
+                border: t === tier ? "1px solid #7c5cff66" : "1px solid transparent",
+              }}
+            >
+              T{t}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mb-2 mt-4 text-[11px] uppercase tracking-wide text-white/40">Secondary passport rights</div>

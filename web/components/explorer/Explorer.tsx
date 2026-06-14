@@ -77,6 +77,9 @@ export default function Explorer() {
               Agents do not get treasury power because they have a wallet. They earn it from independently verified behavior.
             </div>
             <div className="text-xs text-white/40">Behavior -&gt; Verification -&gt; Credential -&gt; Authority</div>
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-edge bg-black/20 px-2 py-1 text-[11px] text-white/55">
+              Verification powered by Chainlink CRE
+            </div>
           </div>
         </div>
         {demo && (

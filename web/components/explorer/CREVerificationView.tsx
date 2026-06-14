@@ -57,7 +57,7 @@ export function CREVerificationView({
   return (
     <div className="card">
       <div className="mb-1 flex items-center gap-2 text-sm uppercase tracking-widest text-white/40">
-        <Workflow size={14} /> Chainlink CRE verification
+        <Workflow size={14} /> 2 · Verification — Chainlink CRE
       </div>
       <p className="mb-2 text-xs text-white/40">
         What: replay the treasury action history against the committed policy. Who: Chainlink CRE workflow. Why: the agent cannot self-report success.

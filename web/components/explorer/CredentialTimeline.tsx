@@ -23,7 +23,7 @@ export function CredentialTimeline({ attestations, violations }: { attestations:
 
   return (
     <div className="card">
-      <div className="mb-1 text-sm uppercase tracking-widest text-white/40">Verification and credential timeline</div>
+      <div className="mb-1 text-sm uppercase tracking-widest text-white/40">3 · Credentials — verification timeline</div>
       <p className="mb-3 text-xs text-white/40">Verified behavior -&gt; typed attestation -&gt; credential state -&gt; authority. Every credential traces to outcomes.</p>
 
       {rows.length === 0 && <div className="text-sm text-white/30">No verification activity yet.</div>}

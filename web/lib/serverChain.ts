@@ -1,0 +1,75 @@
+// Server-only chain access for the Chainlink CRE bridge + demo faucet.
+// The operator / workflowSender private key lives ONLY here (read from env on
+// the server) and is never shipped to the browser. Imported exclusively by
+// route handlers under app/api/*.
+
+import { promises as fs } from "fs";
+import path from "path";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  defineChain,
+  type PublicClient,
+  type WalletClient,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
+
+export type DemoConfig = {
+  chainId: number;
+  contracts: { passport: `0x${string}`; engine: `0x${string}`; creReceiver: `0x${string}` };
+  workflowSender: `0x${string}`;
+};
+
+const localChain = defineChain({
+  id: 31337,
+  name: "Hardhat",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
+});
+
+// Well-known Hardhat account #0 — the local seed's deployer / workflowSender.
+// LOCAL ONLY: on any non-local chain an explicit OPERATOR_PRIVATE_KEY is required.
+const LOCAL_DEFAULT_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+let _cfg: DemoConfig | null = null;
+export async function loadConfig(): Promise<DemoConfig> {
+  if (_cfg) return _cfg;
+  const file = path.join(process.cwd(), "public", "demo.json");
+  _cfg = JSON.parse(await fs.readFile(file, "utf8")) as DemoConfig;
+  return _cfg;
+}
+
+function chainFor(chainId: number) {
+  if (chainId === baseSepolia.id) return baseSepolia;
+  return localChain;
+}
+
+function rpcFor(chainId: number): string | undefined {
+  if (chainId === baseSepolia.id) return process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org";
+  return process.env.RPC_URL ?? "http://127.0.0.1:8545";
+}
+
+function operatorKey(chainId: number): `0x${string}` {
+  const key = process.env.OPERATOR_PRIVATE_KEY;
+  if (key) return (key.startsWith("0x") ? key : `0x${key}`) as `0x${string}`;
+  if (chainId === 31337) return LOCAL_DEFAULT_KEY as `0x${string}`;
+  throw new Error("OPERATOR_PRIVATE_KEY is required for non-local chains");
+}
+
+export async function serverClients(): Promise<{
+  cfg: DemoConfig;
+  chain: ReturnType<typeof chainFor>;
+  publicClient: PublicClient;
+  wallet: WalletClient;
+  operator: `0x${string}`;
+}> {
+  const cfg = await loadConfig();
+  const chain = chainFor(cfg.chainId);
+  const rpc = rpcFor(cfg.chainId);
+  const account = privateKeyToAccount(operatorKey(cfg.chainId));
+  const publicClient = createPublicClient({ chain, transport: http(rpc) }) as PublicClient;
+  const wallet = createWalletClient({ account, chain, transport: http(rpc) });
+  return { cfg, chain, publicClient, wallet, operator: account.address };
+}

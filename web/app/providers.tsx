@@ -28,19 +28,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   if (!mounted) return <>{children}</>;
 
-  if (!PRIVY_APP_ID) {
-    return (
-      <div className="mx-auto max-w-2xl px-6 py-20 text-center text-sm text-white/60">
-        Set <code>NEXT_PUBLIC_PRIVY_APP_ID</code> in <code>web/.env.local</code> to run the demo.
-      </div>
-    );
-  }
+  // The Explorer reads the chain via its own viem client and never needs Privy,
+  // so render children directly when no app id is configured. This keeps the app
+  // deployable without Privy credentials; the (optional) Privy login flow only
+  // activates when an app id is present.
+  if (!PRIVY_APP_ID) return <>{children}</>;
 
   return (
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
-        appearance: { theme: "dark", accentColor: "#7c5cff", logo: undefined },
+        appearance: { theme: "dark", accentColor: "#34d399", logo: undefined },
         // Auto-provision an embedded wallet so the founder can authorize agents
         // without bringing their own wallet — the "who authorized this agent?"
         // anchor for the whole credential system.

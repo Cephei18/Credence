@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ShieldCheck, AlertTriangle } from "lucide-react";
-import { CREDENTIAL_STATE, LEVELS, TREASURY_TIER_LABEL, ATT, type CredentialSnapshot, type DemoAgent } from "@/lib/credence";
+import { CREDENTIAL_STATE, TREASURY_TIER_LABEL, ATT, type CredentialSnapshot, type DemoAgent } from "@/lib/credence";
 
 const STATE_STYLE: Record<string, string> = {
   None: "text-white/30 border-white/10",
@@ -33,6 +33,7 @@ function CredentialChip({ label, state, description }: { label: string; state: n
 export function PassportExplorer({ agent, snap }: { agent: DemoAgent; snap: CredentialSnapshot }) {
   const compliant = agent.flavor === "compliant";
   const tierColor = snap.tier >= 2 ? "#34d399" : snap.tier === 1 ? "#fbbf24" : "#9aa0aa";
+  const activeCount = snap.states.filter((s) => s === 2).length;
   return (
     <motion.div layout className="card relative overflow-hidden">
       <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl opacity-25" style={{ background: tierColor }} />
@@ -43,8 +44,8 @@ export function PassportExplorer({ agent, snap }: { agent: DemoAgent; snap: Cred
           </div>
           <div className="mt-1 text-2xl font-semibold">{agent.name}</div>
           <div className="mt-1 text-sm text-white/40">
-            Protocol level {LEVELS[snap.level]} · verified outcomes {snap.verifiedCount.toString()} ·{" "}
-            <span className={snap.violations > 0n ? "text-bad" : ""}>violations {snap.violations.toString()}</span>
+            {activeCount} active credential{activeCount === 1 ? "" : "s"} · {snap.verifiedCount.toString()} verified outcomes ·{" "}
+            <span className={snap.violations > 0n ? "text-bad" : ""}>{snap.violations.toString()} violations</span>
           </div>
         </div>
         <div className="text-right">

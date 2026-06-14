@@ -50,6 +50,16 @@ export function MiniChart({
           const breach = floor !== undefined && v < floor;
           return <circle key={i} cx={x(i)} cy={y(v)} r={breach ? 4 : 2.5} fill={breach ? floorColor : color} />;
         })}
+        {floor !== undefined &&
+          (() => {
+            const bi = values.findIndex((v) => v < floor);
+            if (bi < 0) return null;
+            return (
+              <text x={x(bi)} y={y(values[bi]) + 14} textAnchor="middle" fontSize="9" fontWeight="bold" fill={floorColor}>
+                BREACH
+              </text>
+            );
+          })()}
       </svg>
     </div>
   );

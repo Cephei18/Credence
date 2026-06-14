@@ -2,17 +2,16 @@
 
 import dynamic from "next/dynamic";
 
-// The flow uses Privy + wagmi hooks that must run only in the browser, so load
-// it with ssr:false — keeps it out of the static prerender pass at build time.
-const PassportFlow = dynamic(() => import("@/components/PassportFlow"), {
+// Credence is a single-scroll narrative: Behavior → Verification → Credential →
+// Authority. Client-only: it reads the chain via viem and runs the Chainlink CRE
+// workflow handler in-browser, with a graceful fallback when no chain is up.
+const Credence = dynamic(() => import("@/components/site/Credence"), {
   ssr: false,
   loading: () => (
-    <div className="mx-auto max-w-2xl px-6 py-20 text-center text-sm text-white/40">
-      Loading Agent Passport…
-    </div>
+    <div className="grid min-h-screen place-items-center text-sm text-faint">Loading Credence…</div>
   ),
 });
 
 export default function Home() {
-  return <PassportFlow />;
+  return <Credence />;
 }

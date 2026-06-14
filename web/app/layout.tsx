@@ -3,9 +3,9 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Agent Passport — credential infrastructure for autonomous agents",
+  title: "Credence — authority for AI agents, earned through verified behavior",
   description:
-    "Autonomous agents earn delegated authority through independently verified behavior.",
+    "Identity shouldn't grant authority. Behavior earns it. Credence is the authority layer for AI agents, with verification by Chainlink CRE.",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="font-mono antialiased">
+      <body className="antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

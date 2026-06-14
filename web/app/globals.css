@@ -2,117 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Credence — calm, premium dark theme.
+  One primary accent (emerald = brand + "earned"), one secondary (slate-blue =
+  Chainlink verification). Rose is reserved strictly for the failure state.
+  No rainbow, no gradient soup — high signal, low noise.
+*/
 :root {
   color-scheme: dark;
-  --bg: #08101f;
-  --bg-soft: rgba(8, 16, 31, 0.92);
-  --surface: rgba(16, 24, 55, 0.82);
-  --surface-strong: rgba(20, 34, 66, 0.96);
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #eef3ff;
-  --muted: #b9c5ff;
-  --green: #048b7b;
-  --cyan: #6bf1cb;
-  --pink: #cba2ca;
-  --purple: #6662a7;
-  --blue: #5fa6ed;
-  --navy: #203053;
-  --gold: #f3ac67;
+
+  --bg: #07090e;
+  --bg-2: #090c12;
+  --surface: rgba(255, 255, 255, 0.022);
+  --surface-2: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+
+  --text: #f4f6fa;
+  --muted: rgba(244, 246, 250, 0.62);
+  --faint: rgba(244, 246, 250, 0.4);
+
+  --accent: #34d399; /* emerald — brand / earned authority */
+  --accent-dim: rgba(52, 211, 153, 0.12);
+  --secondary: #6b93f5; /* slate-blue — Chainlink verification */
+  --secondary-dim: rgba(107, 147, 245, 0.12);
+  --fail: #fb7185; /* rose — denied / breached */
+  --fail-dim: rgba(251, 113, 133, 0.1);
+}
+
+* {
+  border-color: var(--border);
 }
 
 body {
   min-height: 100vh;
   color: var(--text);
-  position: relative;
   background:
-    radial-gradient(900px 900px at 15% 10%, rgba(0, 255, 164, 0.16), transparent),
-    radial-gradient(800px 800px at 85% 20%, rgba(255, 88, 168, 0.14), transparent),
-    radial-gradient(1200px 650px at 50% 0%, rgba(255, 88, 168, 0.08), transparent),
-    linear-gradient(180deg, #08101f 0%, #0b1423 45%, #101a2f 100%);
+    radial-gradient(800px 500px at 50% -8%, rgba(52, 211, 153, 0.07), transparent 70%),
+    var(--bg);
   font-family: Inter, "Inter var", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-body::before,
-body::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
+html {
+  scroll-behavior: smooth;
 }
 
-body::before {
-  background: linear-gradient(135deg, rgba(0, 255, 164, 0.14), transparent 18%, rgba(255, 88, 168, 0.12) 45%, transparent 65%, rgba(0, 255, 164, 0.08));
+/* ── primitives ─────────────────────────────────────────────────────── */
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
 }
 
-body::after {
-  background-image:
-    radial-gradient(circle at 20% 15%, rgba(0, 255, 164, 0.14), transparent 22%),
-    radial-gradient(circle at 80% 25%, rgba(255, 88, 168, 0.14), transparent 18%),
-    linear-gradient(135deg, rgba(255, 88, 168, 0.08) 0%, transparent 38%, rgba(0, 255, 164, 0.08) 60%, transparent 100%);
-  opacity: 0.95;
-  transform: translateY(-10px);
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 
-.card {
-  @apply rounded-[2rem] border p-6 shadow-[0_30px_70px_-35px_rgba(0,0,0,0.75)];
-  background: rgba(15, 25, 48, 0.8);
-  border-color: var(--border);
-  backdrop-filter: blur(32px);
+.mono {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-variant-ligatures: none;
 }
 
-.dashboard-header {
-  background: linear-gradient(135deg, rgba(0, 255, 164, 0.14), rgba(255, 88, 168, 0.16), rgba(0, 255, 164, 0.08));
-  border-color: rgba(0, 255, 164, 0.22);
-}
-
-.dashboard-activity {
-  background: linear-gradient(135deg, rgba(0, 255, 164, 0.12), rgba(255, 88, 168, 0.18));
-  border-color: rgba(255, 88, 168, 0.22);
-}
-
-.dashboard-title {
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: -0.03em;
-  font-weight: 800;
-}
-
+/* ── buttons ────────────────────────────────────────────────────────── */
 .btn {
-  @apply rounded-2xl px-5 py-3 text-sm font-semibold transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.18s ease;
+  cursor: pointer;
 }
-.btn-large {
-  @apply rounded-2xl px-6 py-4 text-base tracking-wide;
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .btn-primary {
-  @apply text-white;
-  background: linear-gradient(135deg, rgba(0, 255, 164, 0.95), rgba(255, 88, 168, 0.95), rgba(255, 204, 96, 0.94));
-  background-size: 220% 220%;
-  box-shadow: 0 24px 80px -30px rgba(0, 255, 164, 0.25);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--accent);
+  color: #04130d;
+  box-shadow: 0 8px 30px -12px rgba(52, 211, 153, 0.55);
 }
-.btn-primary:hover {
-  filter: brightness(1.08);
-  background-position: 100% 0;
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
 }
 .btn-ghost {
-  @apply text-white/85 border;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
 }
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.11);
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
 }
 
+/* ── pills ──────────────────────────────────────────────────────────── */
 .pill {
-  @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border;
-  border-color: rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+.pill-pass {
+  color: var(--accent);
+  border-color: rgba(52, 211, 153, 0.32);
+  background: var(--accent-dim);
+}
+.pill-fail {
+  color: var(--fail);
+  border-color: rgba(251, 113, 133, 0.32);
+  background: var(--fail-dim);
 }
 
 code {
-  @apply rounded-xl bg-white/5 px-1.5 py-0.5 text-sm text-white/80 font-mono;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: var(--muted);
 }
 
 ::selection {
-  background: rgba(0, 255, 164, 0.28);
+  background: rgba(52, 211, 153, 0.26);
+}
+
+/* thin, unobtrusive scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
